@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "pata — cuidado para quem você ama",
-  description: "Acompanhe a rotina e a saúde do seu pet em um só lugar.",
+  title: "Pata — gestão para clínicas veterinárias",
+  description: "Organize a equipe e os atendimentos da sua clínica veterinária em um só lugar.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
