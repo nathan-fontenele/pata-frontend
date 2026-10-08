@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pata Frontend
 
-## Getting Started
+Frontend em Next.js para a plataforma Pata, focada na gestão de clínicas veterinárias. O cadastro de tutores não faz parte do produto.
 
-First, run the development server:
+## Desenvolvimento
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Autenticação e API
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+O login usa o SDK oficial do Auth0 para Next.js. Crie uma aplicação **Regular Web Application** no Auth0 e copie `.env.example` para `.env.local`. Preencha `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_SECRET`, `AUTH0_AUDIENCE` e `PATA_API_URL`. Gere `AUTH0_SECRET` com `openssl rand -hex 32`.
 
-## Learn More
+No Auth0, cadastre:
 
-To learn more about Next.js, take a look at the following resources:
+- Allowed Callback URL: `http://localhost:3000/callback`
+- Allowed Logout URL: `http://localhost:3000`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+O login/cadastro passa por `/auth/login`; o SDK trata callback e sessão em cookies protegidos. O token não é enviado ao JavaScript do navegador: as chamadas autenticadas passam pelo proxy `/api/backend/*`, que encaminha a requisição à API com `Authorization: Bearer`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Após criar a identidade no Auth0, o fluxo de onboarding da clínica chama:
 
-## Deploy on Vercel
+- `POST /api/organizacao` para cadastrar a organização da clínica (`nome`, `slug`, `cnpj` e `email`; `logoUrl` é opcional).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+O `POST /api/organizacao` é público no backend, com limite de cinco tentativas por IP a cada 15 minutos. O onboarding do frontend continua após o login/cadastro no Auth0; se a API responder `429`, a tela informa o tempo de espera. A auditoria identifica essas criações como `cadastro-publico`, sem associar um usuário autenticado. As demais rotas protegidas usam token Bearer; configure `AUTH0_AUDIENCE` com o identificador da API cadastrado no Auth0 e aceito pelo backend.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+O Swagger também documenta `GET /api/organizacao` e operações autenticadas para equipes, usuários e convites.
+
+## Scripts
+
+- `npm run dev` inicia o servidor de desenvolvimento.
+- `npm run build` cria a versão de produção.
+- `npm run lint` executa o ESLint.
