@@ -1,43 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 type AuthMode = "login" | "signup";
 
-const auth0Domain = process.env.NEXT_PUBLIC_AUTH0_DOMAIN;
-const auth0ClientId = process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID;
-const auth0Audience = process.env.NEXT_PUBLIC_AUTH0_AUDIENCE;
-const auth0RedirectUri =
-  process.env.NEXT_PUBLIC_AUTH0_REDIRECT_URI ||
-  (typeof window !== "undefined" ? window.location.origin : "");
-
-function buildAuth0Url(mode: AuthMode) {
-  if (!auth0Domain || !auth0ClientId || !auth0RedirectUri) return null;
-  const params = new URLSearchParams({
-    client_id: auth0ClientId,
-    redirect_uri: auth0RedirectUri,
-    response_type: "code",
-    scope: "openid profile email",
-    ...(mode === "signup" ? { screen_hint: "signup" } : {}),
-    ...(auth0Audience ? { audience: auth0Audience } : {}),
-  });
-  return `https://${auth0Domain}/authorize?${params.toString()}`;
-}
-
-export default function AuthScreen({ mode }: { mode: AuthMode }) {
+export default function AuthScreen({
+  mode,
+  authConfigured,
+}: {
+  mode: AuthMode;
+  authConfigured: boolean;
+}) {
   const [isLoading, setIsLoading] = useState(false);
-  const [configurationError, setConfigurationError] = useState(false);
   const isSignup = mode === "signup";
-  const authUrl = useMemo(() => buildAuth0Url(mode), [mode]);
 
-  function startAuth() {
-    if (!authUrl) {
-      setConfigurationError(true);
-      return;
-    }
-    setIsLoading(true);
-    window.location.assign(authUrl);
+  function getAuthUrl() {
+    const returnTo = isSignup ? "/onboarding" : "/dashboard";
+    const params = new URLSearchParams({ returnTo });
+    if (isSignup) params.set("screen_hint", "signup");
+    return `/auth/login?${params.toString()}`;
   }
 
   return (
@@ -45,12 +27,12 @@ export default function AuthScreen({ mode }: { mode: AuthMode }) {
       <section className="auth-art" aria-label="Sobre o Pata">
         <div className="art-topline">
           <div className="brand-mark" aria-hidden="true"><span className="brand-paw">✦</span></div>
-          <span className="brand-name">pata</span>
+          <span className="brand-name">Pata</span>
         </div>
         <div className="art-copy">
-          <p className="eyebrow">Seu cuidado, mais simples</p>
-          <h1>Tudo o que seu pet precisa,<span> em um só lugar.</span></h1>
-          <p className="art-description">Organize a rotina, acompanhe a saúde e viva mais momentos bons ao lado de quem faz parte da família.</p>
+          <p className="eyebrow">Gestão veterinária, mais simples</p>
+          <h1>Sua clínica organizada<span> em um só lugar.</span></h1>
+          <p className="art-description">Cuide da agenda, da equipe e dos atendimentos da sua clínica em uma plataforma feita para a rotina veterinária.</p>
         </div>
         <div className="art-orbit orbit-one" aria-hidden="true" />
         <div className="art-orbit orbit-two" aria-hidden="true" />
@@ -62,26 +44,39 @@ export default function AuthScreen({ mode }: { mode: AuthMode }) {
       <section className="auth-panel">
         <div className="mobile-brand">
           <div className="brand-mark" aria-hidden="true"><span className="brand-paw">✦</span></div>
-          <span className="brand-name">pata</span>
+          <span className="brand-name">Pata</span>
         </div>
         <div className="auth-card">
           <div className="auth-heading">
-            <p className="eyebrow">Bem-vindo à pata</p>
+            <p className="eyebrow">Bem-vindo à Pata</p>
             <h2>{isSignup ? "Crie sua conta" : "Que bom ter você aqui"}</h2>
-            <p>{isSignup ? "Comece agora a cuidar melhor de quem está sempre ao seu lado." : "Entre para continuar acompanhando a rotina do seu pet."}</p>
+            <p>{isSignup
+              ? "Crie seu acesso profissional e organize a rotina da sua clínica veterinária."
+              : "Entre para gerenciar a equipe e os atendimentos da sua clínica."}</p>
           </div>
           <div className="auth-switch" role="tablist" aria-label="Acesso à conta">
             <Link href="/login" className={!isSignup ? "active" : ""} role="tab" aria-selected={!isSignup}>Entrar</Link>
-            <Link href="/criar-conta" className={isSignup ? "active" : ""} role="tab" aria-selected={isSignup}>Criar conta</Link>
+            <Link href="/criar-conta" className={isSignup ? "active" : ""} role="tab" aria-selected={isSignup}>Criar acesso</Link>
           </div>
-          <button className="auth-button" onClick={startAuth} disabled={isLoading}>
-            {isLoading ? "Abrindo acesso..." : isSignup ? "Criar minha conta" : "Entrar na minha conta"}
-            {!isLoading && <span aria-hidden="true">→</span>}
-          </button>
-          {configurationError && <p className="configuration-error" role="alert">Configure as variáveis do Auth0 no arquivo <code>.env.local</code> para continuar.</p>}
+          {authConfigured ? (
+            <a className="auth-button" href={getAuthUrl()} onClick={() => setIsLoading(true)} aria-disabled={isLoading}>
+              {isLoading ? "Abrindo acesso..." : isSignup ? "Criar acesso da clínica" : "Entrar na clínica"}
+              {!isLoading && <span aria-hidden="true">→</span>}
+            </a>
+          ) : (
+            <>
+              <button className="auth-button" type="button" disabled>
+                Configure o Auth0 para continuar
+              </button>
+              <p className="configuration-error" role="alert">
+                Defina <code>AUTH0_DOMAIN</code>, <code>AUTH0_CLIENT_ID</code>, <code>AUTH0_CLIENT_SECRET</code> e <code>AUTH0_SECRET</code> no arquivo <code>.env.local</code>.
+              </p>
+            </>
+          )}
+          {isSignup && authConfigured && <p className="auth-note">Depois de criar seu acesso, você cadastra os dados da organização da clínica.</p>}
           <p className="terms">Ao continuar, você concorda com os <a href="#termos">Termos de uso</a> e a <a href="#privacidade">Política de privacidade</a>.</p>
         </div>
-        <p className="auth-footer">{isSignup ? "Já tem uma conta?" : "Ainda não tem uma conta?"} <Link href={isSignup ? "/login" : "/criar-conta"}>{isSignup ? "Entrar" : "Criar agora"}</Link></p>
+        <p className="auth-footer">{isSignup ? "Já tem um acesso?" : "Ainda não tem acesso?"} <Link href={isSignup ? "/login" : "/criar-conta"}>{isSignup ? "Entrar" : "Criar acesso"}</Link></p>
       </section>
     </main>
   );
